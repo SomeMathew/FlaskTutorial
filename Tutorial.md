@@ -48,8 +48,7 @@ Root directory
 ├── tests
 │   ├── test_reservation.py
 │   └── test_setup.py
-├── requirements.txt
-└── setup.py
+└── requirements.txt
 ```
 
 * `reservations/` is the main Python package which contains the Flask application.
