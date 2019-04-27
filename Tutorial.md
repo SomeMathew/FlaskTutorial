@@ -7,6 +7,7 @@
     * [Setup](#setup)
 * [Application Factory](#application-factory)
 * [Database interface with SQLAlchemy](#database-interface-with-sqlalchemy)
+* [Blueprint View](#blueprint-view)
 
 ## Introduction
 This tutorial will walk you through creating a simple web service for a toy reservation system. A working knowledge of 
@@ -21,7 +22,7 @@ implementation of the necessary API to build simple or complex web services.
 Flask is a non-opinionated framework, it does not impose certain methodologies, libraries or form to build your
 application. There is a large number of libraries available to create more advanced applications and is easily extensible.
 
-### <a name="reference"> Reference </a>
+### Reference
 This tutorial and the reference code can be found [in this repository](https://github.com/SomeMathew/FlaskTutorial).
 Each steps in the tutorial is associated with a Git tag with the finalized code of that section.
 
@@ -273,3 +274,134 @@ class Config:
 At this point the `flask init-db` command can be used to create the table inside the database. 
 **Note**: The environment variable for `FLASK_APP=reservation` needs to be set for custom Click command like the
 `flask run` command.
+
+## Blueprint View
+For the endpoint's view the blueprint facility of Flask will be used. A blueprint is a way to organize the
+code into manageable views that deal with a specific concern of the service.
+
+To use a blueprint, first it is created with its associated views, then it is registered with the Flask
+application object inside the application factory method.
+
+This tutorial will cover a fairly simple blueprint with views for the following endpoints:
+1. Create a new reservation
+2. Retrieve all reservations
+3. Retrieve a specific reservation by Id.
+
+The blueprint is created in `reservation/views/reservations.py`. An abbreviated portion of the file is shown
+here to introduce new concepts. Refer to the source for the complete code. 
+
+**reservation/views/reservations.py**:
+```python
+...
+
+reservations = Blueprint('reservations', __name__, url_prefix='/reservations')
+
+...
+
+@reservations.route('/<int:reservation_id>', methods={'GET'})
+def get_reservation_by_id(reservation_id):
+    ...
+
+...
+
+@reservations.route('', methods={'POST'})
+def create_reservation():
+    """ Creates a new reservation.
+
+    This handler expects a JSON request body with the following fields: name, email, size, time (in ISO format).
+    Optionally a note text field can be given as well.
+
+    :return: application/JSON success or failure message { "error" : <bool>, "msg" : <msg>, "code" : <code> }
+    """
+    ...
+
+    body = request.get_json()
+    # Validate fields exists and are not empty
+    if not body \
+            or not all(field in body for field in fields_req) \
+            or not all(val for field, val in body.items() if field in fields_req):
+        abort(400, f'Required field must not be null or empty. Required: {", ".join(fields_req)}')
+
+    # Validate the date and time
+    ...
+
+    # Validate the party size
+    ...
+
+    # Load any existing client or create a new one
+    client = Person.query.filter(Person.name.ilike(body['name']), Person.email.ilike(body['email'])).first()
+    if not client:
+        client = Person(name=body['name'], email=body['email'])
+
+    reservation = Reservation(
+        client=client,
+        start_datetime=start_datetime,
+        party_size=party_size,
+        note=body['note'] if ('note' in body and body['note']) else ''
+    )
+
+    try:
+        db.session.add(reservation)
+        db.session.commit()
+        return make_response(jsonify({
+            'error': False,
+            'msg': 'Created',
+            'code': 201
+        }), 201)
+    except SQLAlchemyError:
+        abort(500, 'Unable to complete your transaction, try again later.')
+```
+
+*   `reservations = Blueprint('reservations', __name__, url_prefix='/reservations')` creates the Blueprint object which
+    encapsulates our views for the reservations. 
+    
+    *   The first argument gives a unique name to the blueprint. 
+    *   The second argument `url_prefix='/reservations'` defines the url parameter prefix for all views of this 
+        blueprint. Any route defined with the `@reservations.route` decorator will be prefixed by this parameter.
+        
+*   The `@reservations.route` decorators have an identical meaning to the application route previously defined in
+    the application factory. Refer back to the [Application Factory](#application-factory) section.
+    
+    *   Of note is the addition of a dynamic url parameter in the `get_reservation_by_id(reservation_id)` handler. 
+        The route `'/<int:reservation_id>'` will take an int and pass it back as an argument to the parameter of the
+        same name in the decorated function. 
+        
+        In this case the route case be accessed with the url and a reservation id `http://localhost:5000/reservations/1`
+
+*   The `abort()` method is used to create a failure response redirected with a message or exception to the previously 
+    defined error handler `@app.errorhandler`in the application factory. The handler will be chosen based on the HTTP
+    error code.
+
+*   The `Person.query.filter(..).first()` queries the database for a specific `Person` model. It will return `None` if 
+    none can be found. 
+    
+    For more details on available queries refer to the 
+    [SQLAlchemy Query API documentation](https://docs.sqlalchemy.org/en/13/orm/query.html).
+    
+*   `db.session.add(reservation)` adds a given model to the SQLAlchemy Unit of Work as a new object. 
+    It will be committed to the database with the following call `db.session.commit()`. 
+    
+    Note that SQLAlchemy, in its default configuration, will cascade the commit to related objects. In this case, the
+    `client` object will be committed as well if it is a new object, and updated if it has been modified.
+    
+    It is important to handle any database exception for those method calls and return a server error to the user. 
+    It is preferable to not leak any internal details to the user and keep the error message generic. 
+    The actual error, in a production environment, should be logged for further analysis.
+    
+*   The `make_response()` call is implicitly done by the Flask framework, however it defaults to a `200: OK` HTTP code. 
+    To override this behaviour, it must be explicitly used, as done above to use the `201: Created` HTTP code. 
+    
+
+The last piece of needed code is to register the Blueprint with the flask application. This is done in the application
+factory method. This code is self-descriptive, it should be added where the `# TODO: Blueprint registrations` was
+previously left.
+
+**reservations/\_\_init\_\_.py**:
+```python
+from reservation.views.reservations import reservations
+app.register_blueprint(reservations)
+```
+
+You can now start the service and access the endpoints. The [curl](https://curl.haxx.se/) or 
+[Postman](https://www.getpostman.com/) utilities are useful tool to call your services during development. Their use
+is outside the scope of this tutorial, however they are well documented.

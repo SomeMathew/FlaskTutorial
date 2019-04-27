@@ -37,6 +37,7 @@ def create_app(conf: Config = None):
     def internal_error(e):
         return make_response(jsonify({"error": True, "code": 500, "msg": str(e)}), 500)
 
-    # TODO: Blueprint registrations
+    from reservation.views.reservations import reservations
+    app.register_blueprint(reservations)
 
     return app
