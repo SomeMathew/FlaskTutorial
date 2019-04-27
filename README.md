@@ -1,2 +1,5 @@
 # FlaskTutorial
-A Beginner Flask Tutorial
+A Beginner Flask Tutorial. See Tutorial.md
+
+## Contributor
+Mathieu Breault
