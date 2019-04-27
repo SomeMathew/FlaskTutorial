@@ -8,6 +8,7 @@
 * [Application Factory](#application-factory)
 * [Database interface with SQLAlchemy](#database-interface-with-sqlalchemy)
 * [Blueprint View](#blueprint-view)
+* [Testing](#testing)
 
 ## Introduction
 This tutorial will walk you through creating a simple web service for a toy reservation system. A working knowledge of 
@@ -406,3 +407,55 @@ app.register_blueprint(reservations)
 You can now start the service and access the endpoints. The [curl](https://curl.haxx.se/) or 
 [Postman](https://www.getpostman.com/) utilities are useful tool to call your services during development. Their use
 is outside the scope of this tutorial, however they are well documented.
+
+
+## Testing
+In order to test the service, the standard Python module, `unittest`, will be used. The details of `unittest` will not
+be covered, refer to the [unittest Python Documentation](https://docs.python.org/3.7/library/unittest.html).
+
+The important portion covered here is the `setUp()` and `tearDown()` needed to test a Flask application with SQLAlchemy.
+Refer to the source code for all the details.
+
+**tests/test\_reservation.py**:
+```python
+...
+
+class TestReservation(unittest.TestCase):
+    def setUp(self):
+        tested_app = create_app(TestConfig)
+        tested_app.app_context().push()
+
+        db.create_all()
+
+        # Add known rows
+        ...
+
+        # Add them to the db
+        ...
+
+        self.db = db
+        self.app = tested_app.test_client()
+
+    def tearDown(self):
+        # clean up the DB after every test
+        self.db.session.remove()
+        self.db.drop_all()
+
+    ...
+```
+
+*   In `setUp()` the app is first created with the previously defined application factory with a `TestConfig` class.
+    Refer to `reservation/config.py` for the configuration.
+    
+    The application context needs to be initialized when testing, this is done automatically by the `flask run` command
+    but not in a manual testing situation. This is done with the `tested_app.app_context().push()` method.
+    
+*   The database is then initialized with the same method previously explained. Refer to the 
+    [Database interface with SQLAlchemy](#database-interface-with-sqlalchemy) section.
+    
+*   For the tests to be repeatable and not depend or be affected by previous tests, the database needs to be reseted 
+    after every tests. This is accomplished in the `tearDown()` function and the methods used are easily understood.
+    
+
+To run the tests, simply used the Python runner for the unittest module with the `python3 -m unittest` command. 
+Details and advanced options can be found in the documentation.

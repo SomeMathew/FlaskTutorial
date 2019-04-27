@@ -4,7 +4,7 @@ from reservation.config import Config
 __version__ = '0.0.1'
 
 
-def create_app(conf: Config = None):
+def create_app(conf=None):
     app = Flask(__name__)
 
     if conf:

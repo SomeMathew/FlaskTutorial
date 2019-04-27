@@ -9,3 +9,8 @@ class DevConfig(Config):
 
 class DefaultConfig(DevConfig):
     pass
+
+
+class TestConfig(Config):
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = r"sqlite:///../tests/test_reservation_tutorial.sqlite"
