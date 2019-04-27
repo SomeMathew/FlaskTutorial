@@ -17,20 +17,20 @@ This tutorial will use Flask as the basis of the service, SQLAlchemy to interfac
 database. Python 3.6+ is assumed in this tutorial.
 
 ### About Flask
-Flask is a microframework for building web services and applications based on werkzeug. It provides a lightweight 
+Flask is a microframework for building web services and applications based on Werkzeug. It provides a lightweight 
 implementation of the necessary API to build simple or complex web services.
 Flask is a non-opinionated framework, it does not impose certain methodologies, libraries or form to build your
-application. There is a large number of libraries available to create more advanced applications and is easily extensible.
+application. There is a large number of libraries available to create more advanced applications and it is extensible.
 
 ### Reference
 This tutorial and the reference code can be found [in this repository](https://github.com/SomeMathew/FlaskTutorial).
-Each steps in the tutorial is associated with a Git tag with the finalized code of that section.
+Each steps in the tutorial is associated with a branch with the finalized code of that section.
 
 ### Setup
 #### Environment
 In order to prevent polluting the global libraries for *pip* it is preferable to setup a 
-[virtual environment (venv)](https://docs.python.org/3.7/library/venv.html) for your project. The virtual environment will be
-created in the root directory of the project `FlaskTutorial/`.
+[virtual environment (venv)](https://docs.python.org/3.7/library/venv.html) for your project. The virtual environment 
+will be created in the root directory of the project `FlaskTutorial/`.
 
 To create and activate the virtual environment, follow the 
 [Python's venv documentation](https://docs.python.org/3.7/library/venv.html).
@@ -132,14 +132,14 @@ class DefaultConfig(DevConfig):
     pass
 ```
 
-This simple application will be runnable as his with the following commands:
+This simple application will be runnable as is with the following commands:
 ```
 export FLASK_APP=reservation FLASK_ENV=development
 flask run
 ```
 *   The environment variables are necessary for running the application using the flask runner. 
     If on windows, use the `set` command instead.
-*   `flask run` will instantiate use the factory to create the app and run it on a development WSGI server.
+*   `flask run` will use the factory to instantiate the app and run it on a development WSGI server.
 
 Let's break down this part of the application to get a better idea of what is done by the factory method.
 
@@ -147,14 +147,15 @@ Let's break down this part of the application to get a better idea of what is do
     `flask run` command as described above. It can also be used directly with a custom configuration when testing 
     or deploying using a startup script with a WSGI server such as [chaussette](https://chaussette.readthedocs.io/).
 
-*   `app = Flask(__name__)` Creates the main flask application that will serve the requests to your services. This is the
-    return value of your factory.
+*   `app = Flask(__name__)` Creates the main flask application that will serve the requests to your services. This is 
+    the return value of your factory.
 
-*   The `app.config.from_object()` method will configure the application based on the default configuration or what is passed 
-    to the factory method. For now, the `DefaultConfig` only sets the DEBUG flag and is set to our `DevConfig` class.
+*   The `app.config.from_object()` method will configure the application based on the default configuration or what is 
+    passed to the factory method. For now, the `DefaultConfig` only sets the DEBUG flag and is set to our `DevConfig` 
+    class.
 
-*   `@app.route('/version', methods={'GET'})` is a Python decorator which sets a url route for the decorated function, 
-    `version()` in our case. This will be used as an alive check and confirm our service is running.
+*   `@app.route('/version', methods={'GET'})` is a Python decorator which sets a url route for the decorated method, 
+    `version()` in our case. This will be used as an alive check to confirm our service is running.
     
     *   `'/version'` defines the route which will be registered on the WSGI router. This method will be accessible at
         `http://localhost:5000/version` or at your custom url instead of localhost.
@@ -171,7 +172,7 @@ Interfacing with a database, in this case Sqlite, is straightforward with the SQ
 be initialized and models must be defined as the representation of a table row. Second the SQLAlchemy object must be
 registered with the Flask application. 
 
-The models and SQLAlchemy object will be defined inside the `models.py` file in the `reservation\` folder.
+The models and SQLAlchemy object will be defined inside the `models.py` file in the `reservation/` folder.
 
 The service will save a reservation under a person's name and email. No authentication will be considered. A user can
 create a new reservation under a given name and email. In this contrived example, the Person model demonstrates the
@@ -231,8 +232,8 @@ def init_db_command():
         [Flask-SQLAlchemy documentation](https://flask-sqlalchemy.palletsprojects.com/en/2.x/models/) and the 
         [SQLAlchemy documentation](https://docs.sqlalchemy.org/en/13/core/metadata.html).
 
-*   To set a relationship between models and table, first a ForeignKey must be setup then an ORM relationship can be
-    created to access the related models.
+*   To set a relationship between models, first a ForeignKey must be create and an ORM relationship can be created to 
+    access the related models directly on the object.
 
     *   `db.ForeignKey('person.id')` Creates a foreign key to the `person` table and its `id` column.
     
