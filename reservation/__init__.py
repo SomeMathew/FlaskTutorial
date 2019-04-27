@@ -12,7 +12,9 @@ def create_app(conf: Config = None):
     else:
         app.config.from_object('reservation.config.DefaultConfig')
 
-    # TODO: DB setup
+    import reservation.models as models
+    models.db.init_app(app)
+    app.cli.add_command(models.init_db_command)
 
     @app.route('/version', methods={'GET'})
     def version():

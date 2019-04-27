@@ -163,3 +163,113 @@ Let's break down this part of the application to get a better idea of what is do
 
 *   The `@app.errorhandler(405)` decorator will be forwarded requests which returns a given failure code and will
     override the response to a custom format. This will be useful later with the `abort()` method in a request handler.
+
+
+## Database interface with SQLAlchemy
+Interfacing with a database, in this case Sqlite, is straightforward with the SQLAlchemy ORM. First SQLAlchemy must
+be initialized and models must be defined as the representation of a table row. Second the SQLAlchemy object must be
+registered with the Flask application. 
+
+The models and SQLAlchemy object will be defined inside the `models.py` file in the `reservation\` folder.
+
+The service will save a reservation under a person's name and email. No authentication will be considered. A user can
+create a new reservation under a given name and email. In this contrived example, the Person model demonstrates the
+concept of relationships in SQLAlchemy. 
+
+**reservation/models.py**:
+```python
+import click
+from flask_sqlalchemy import SQLAlchemy
+from flask.cli import with_appcontext
+
+db = SQLAlchemy()
+
+
+class Person(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    version = db.Column(db.Integer, nullable=False)
+
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100), nullable=False)
+
+    __mapper_args__ = {
+        "version_id_col": version
+    }
+
+
+class Reservation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    version = db.Column(db.Integer, nullable=False)
+
+    client_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
+    client = db.relationship(Person, backref='reservations')
+
+    start_datetime = db.Column(db.DateTime, nullable=True)
+    party_size = db.Column(db.Integer, nullable=False)
+    note = db.Column(db.Text, nullable=True)
+
+    __mapper_args__ = {
+        "version_id_col": version
+    }
+
+
+@click.command('init-db')
+@with_appcontext
+def init_db_command():
+    db.create_all()
+    click.echo('Database created!')
+
+```
+
+*   `db = SQLAlchemy()` Creates the SQLAlchemy object, it will be initialized in the application factory below.
+
+*   Each model is defined as a subclass of the db.Model class. To define a column, such as `id` the db.Column object
+    must be assigned to a class member of the same name. 
+
+    *   For more details on the Column parameters and field types available see the 
+        [Flask-SQLAlchemy documentation](https://flask-sqlalchemy.palletsprojects.com/en/2.x/models/) and the 
+        [SQLAlchemy documentation](https://docs.sqlalchemy.org/en/13/core/metadata.html).
+
+*   To set a relationship between models and table, first a ForeignKey must be setup then an ORM relationship can be
+    created to access the related models.
+
+    *   `db.ForeignKey('person.id')` Creates a foreign key to the `person` table and its `id` column.
+    
+    *   `client = db.relationship(Person, backref='reservations'` creates a relationship in `Reservation` which links
+        to the `Person` model. The `backref` parameter will create a link in the `Person` model with a field 
+        `reservations` which contains all that person's reservations.
+        
+*   To initialize the database a click command for the `flask` utility is created with the `@click.command('init-db')` 
+    and `@with_appcontext` decorators. The former creates the `flask init-db` command and the latter loads the app
+    context from the factory method that will be used. The command will be registered in the application factory below.
+    
+    *   `db.create_all()` will initialize the tables in the database according to the model definition.
+
+*   While the details are outside of the scope of this tutorial, the `__mapper_args__` configures the `version` field
+    for optimistic concurrency control.
+
+The application factory will link the SQLAlchemy object with the application context and will initialize the click 
+command. The following code needs to be added to the factory method where the `# TODO: DB Setup` was left.
+
+**reservation/\_\_init\_\_.py**:
+```python
+import reservation.models as models
+models.db.init_app(app)
+app.cli.add_command(models.init_db_command)
+```
+*   `models.db.init_app(app)` links the SQLAlchemy object with the flask's application context.
+
+*   `app.cli.add_command(models.init_db_command` will register the Click `init-db` command.
+
+
+The database connection also needs to be added to the configuration objects.
+
+**reservation/config.py**
+```python
+class Config:
+    SQLALCHEMY_DATABASE_URI = r"sqlite:///reservation_tutorial.sqlite"
+```
+
+At this point the `flask init-db` command can be used to create the table inside the database. 
+**Note**: The environment variable for `FLASK_APP=reservation` needs to be set for custom Click command like the
+`flask run` command.
